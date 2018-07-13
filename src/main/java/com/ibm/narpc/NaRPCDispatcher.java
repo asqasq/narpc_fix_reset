@@ -84,7 +84,7 @@ public class NaRPCDispatcher<R extends NaRPCMessage, T extends NaRPCMessage> imp
 							long ticket = channel.fetch(request);
 							if(ticket > 0){
 								T response = service.processRequest(request);
-								channel.transmit(ticket, response);	
+								channel.transmit(ticket, response);
 							} else if (ticket < 0){
 								LOG.info("closing channel " + channel.address());
 								this.service.removeEndpoint(channel);
@@ -93,7 +93,7 @@ public class NaRPCDispatcher<R extends NaRPCMessage, T extends NaRPCMessage> imp
 							} else {
 								throw new Exception("ticket number invalid");
 							}
-						} 
+						}
 						keyIterator.remove();
 					}
 				}
@@ -104,7 +104,7 @@ public class NaRPCDispatcher<R extends NaRPCMessage, T extends NaRPCMessage> imp
 		}
 		LOG.info("closing the select call");
 	}
-	
+
 	public void processIncomingChannels() throws IOException{
 		NaRPCServerChannel channel = incomingChannels.poll();
 		while(channel != null){
@@ -115,6 +115,6 @@ public class NaRPCDispatcher<R extends NaRPCMessage, T extends NaRPCMessage> imp
 			socket.register(selector, SelectionKey.OP_READ, channel);
 			LOG.info("adding new channel to selector, from " + socket.getRemoteAddress());
 			channel = incomingChannels.poll();
-		}		
+		}
 	}
 }
