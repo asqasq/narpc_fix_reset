@@ -65,8 +65,7 @@ public class NaRPCDispatcher<R extends NaRPCMessage, T extends NaRPCMessage> imp
 	public void close(){
     	this.isAlive = false;
 	}
-
-	@Override
+	
 	public void run() {
 		try {
 			while (this.isAlive) {
