@@ -32,9 +32,10 @@ import java.util.concurrent.atomic.AtomicLong;
 import java.util.concurrent.locks.ReentrantLock;
 
 public class NaRPCEndpoint<R extends NaRPCMessage, T extends NaRPCMessage> extends NaRPCChannel {
+	private final AtomicBoolean __done;
 	private NaRPCGroup group;
 	private ConcurrentHashMap<Long, NaRPCFuture<R,T>> pendingRPCs;
-	private ArrayBlockingQueue<ByteBuffer> bufferQueue;	
+	private ArrayBlockingQueue<ByteBuffer> bufferQueue;
 	private AtomicLong sequencer;
 	private SocketChannel channel;
 	private ReentrantLock readLock;
@@ -50,8 +51,9 @@ public class NaRPCEndpoint<R extends NaRPCMessage, T extends NaRPCMessage> exten
 		for (int i = 0; i < group.getQueueDepth(); i++){
 			ByteBuffer buffer = ByteBuffer.allocate(group.getMessageSize());
 			bufferQueue.put(buffer);
-		}	
+		}
 		this.sequencer = new AtomicLong(1);
+		this.__done = new AtomicBoolean(false);
 	}
 
 	public NaRPCFuture<R,T> issueRequest(R request, T response) throws IOException {
@@ -61,11 +63,12 @@ public class NaRPCEndpoint<R extends NaRPCMessage, T extends NaRPCMessage> exten
 		NaRPCFuture<R,T> future = new NaRPCFuture<R,T>(this, request, response, ticket);
 		pendingRPCs.put(ticket, future);
 		while(!tryTransmitting(buffer)){
+			pollResponse(__done);
 		}
 		putBuffer(buffer);
 		return future;
 	}
-	
+
 	public void pollResponse(AtomicBoolean done) throws IOException {
 		ByteBuffer buffer = getBuffer();
 		boolean locked = readLock.tryLock();
@@ -78,9 +81,9 @@ public class NaRPCEndpoint<R extends NaRPCMessage, T extends NaRPCMessage> exten
 				NaRPCFuture<R,T> future = pendingRPCs.remove(ticket);
 				future.getResponse().update(buffer);
 				future.signal();
-			} 
+			}
 			readLock.unlock();
-		} 
+		}
 		putBuffer(buffer);
 	}
 
@@ -88,27 +91,27 @@ public class NaRPCEndpoint<R extends NaRPCMessage, T extends NaRPCMessage> exten
 		this.channel.connect(address);
 		this.channel.socket().setTcpNoDelay(group.isNodelay());
 		this.channel.socket().setReuseAddress(true);
-		this.channel.configureBlocking(false);		
-	}	
-	
+		this.channel.configureBlocking(false);
+	}
+
 	public void close() throws IOException{
 		this.channel.close();
 	}
-	
+
 	public String address() throws IOException {
 		return channel.getRemoteAddress().toString();
 	}
-	
+
 	private boolean tryTransmitting(ByteBuffer buffer) throws IOException{
 		boolean locked = writeLock.tryLock();
 		if (locked) {
 			transmitMessage(channel, buffer);
 			writeLock.unlock();
 			return true;
-		} 		
+		}
 		return false;
 	}
-	
+
 	private ByteBuffer getBuffer(){
 		ByteBuffer buffer = bufferQueue.poll();
 		while(buffer == null){
@@ -116,7 +119,7 @@ public class NaRPCEndpoint<R extends NaRPCMessage, T extends NaRPCMessage> exten
 		}
 		return buffer;
 	}
-	
+
 	private void putBuffer(ByteBuffer buffer){
 		bufferQueue.add(buffer);
 	}
