@@ -22,3 +22,13 @@ limitations under the License.
 
 # narpc
 Nio based RPC library
+
+
+# This version vs. original version
+The original and always up-to-date version can be found at https://github.com/zrlio/narpc. The quick fix
+to the deadlock is pulled from https://github.com/PepperJo/narpc.git branch fix_reset and rebased
+to the https://github.com/zrlio/narpc master branch.
+
+I pushed the merged version to this repository to facilitate building Docker containers with the fix
+as used in https://github.com/asqasq/serverless.
+
